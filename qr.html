@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced QR Code Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 600px; /* Increased max-width for more inputs */
+            width: 100%;
+            text-align: center;
+        }
+        input[type="file"] {
+            display: none; /* Hide default file input */
+        }
+        .custom-file-upload {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s ease-in-out;
+            margin-bottom: 20px;
+        }
+        .custom-file-upload:hover {
+            border-color: #a0aec0;
+        }
+        .qr-code-section {
+            display: none; /* Hidden by default */
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        /* Style for clickable QR code */
+        #qrCodeDisplayContainer { /* New container for the QR code canvas */
+            width: 300px; /* Default size, will be overridden by JS */
+            height: 300px; /* Default size, will be overridden by JS */
+            margin: 0 auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden; /* Important to contain the QR code canvas */
+        }
+        #qrCodeDisplayContainer canvas {
+            display: block; /* Remove extra space below canvas */
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .input-section {
+            margin-bottom: 20px;
+        }
+        .input-section.hidden {
+            display: none;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            text-align: left;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        .color-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .color-input-group input[type="color"] {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .color-input-group input[type="text"] {
+            flex-grow: 1;
+        }
+        .logo-preview {
+            max-width: 100px;
+            max-height: 100px;
+            margin-top: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Advanced QR Code Generator</h1>
+
+        <!-- Content Type Selector -->
+        <div class="mb-6 text-left">
+            <label for="contentType" class="block text-gray-700 text-sm font-bold mb-2">Select Content Type:</label>
+            <select id="contentType" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="text">Text / General Message</option>
+                <option value="url">URL</option>
+                <option value="image">Image</option>
+                <option value="email">Email Address</option>
+                <option value="event">Calendar Event</option>
+                <option value="vcard">Contact Card (vCard)</option>
+                <option value="sms">SMS Message</option>
+                <option value="wifi">Wi-Fi Network</option>
+            </select>
+        </div>
+
+        <!-- Dynamic Input Sections -->
+        <div id="textInputSection" class="input-section">
+            <div class="form-group">
+                <label for="textInput">Enter Text / Name / Message:</label>
+                <textarea id="textInput" rows="4" placeholder="Type your text here..."></textarea>
+            </div>
+            <button id="generateTextQrBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                Generate Text QR Code
+            </button>
+        </div>
+
+        <div id="urlInputSection" class="input-section hidden">
+            <div class="form-group">
+                <label for="urlInput">Enter URL:</label>
+                <input type="url" id="urlInput" placeholder="e.g., https://www.example.com">
+            </div>
+            <button id="generateUrlQrBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                Generate URL QR Code
+            </button>
+        </div>
+
+        <div id="imageInputSection" class="input-section hidden">
+            <label for="imageUpload" class="custom-file-upload">
+                <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <span class="text-lg font-medium text-gray-600">Drag & Drop your image here or <span class="text-blue-600 font-semibold">Browse</span></span>
+                <span class="text-sm text-gray-500 mt-1">PNG, JPG, JPEG up to 5MB</span>
+            </label>
+            <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/jpg">
+            <div id="imagePreviewContainer" class="hidden mb-6">
+                <h2 class="text-xl font-semibold text-gray-700 mb-3">Image Preview:</h2>
+                <img id="imagePreview" src="#" alt="Image Preview" class="max-w-full h-auto rounded-lg shadow-md mx-auto">
+            </div>
+        </div>
+
+        <div id="emailInputSection" class="input-section hidden">
+            <div class="form-group">
+                <label for="emailInput">Enter Email Address:</label>
+                <input type="email" id="emailInput" placeholder="e.g., info@example.com">
+            </div>
+            <button id="generateEmailQrBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                Generate Email QR Code
+            </button>
+        </div>
+
+        <div id="eventInputSection" class="input-section hidden">
+            <div class="form-group">
+                <label for="eventTitleInput">Event Title*:</label>
+                <input type="text" id="eventTitleInput" placeholder="e.g., Team Meeting">
+            </div>
+            <div class="form-group">
+                <label for="eventLocationInput">Location:</label>
+                <input type="text" id="eventLocationInput" placeholder="e.g., Conference Room A">
+            </div>
+            <div class="form-group">
+                <label for="eventStartTimeInput">Start Date & Time*:</label>
+                <input type="datetime-local" id="eventStartTimeInput">
+            </div>
+            <div class="form-group">
+                <label for="eventEndTimeInput">End Date & Time:</label>
+                <input type="datetime-local" id="eventEndTimeInput">
+            </div>
+            <div class="form-group">
+                <label for="eventDescriptionInput">Description:</label>
+                <textarea id="eventDescriptionInput" rows="3" placeholder="e.g., Discuss Q3 strategy"></textarea>
+            </div>
+            <button id="generateEventQrBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                Generate Event QR Code
+            </button>
+        </div>
+
+        <div id="vcardInputSection" class="input-section hidden">
+            <div class="form-group">
+                <label for="vcardFirstName">First Name:</label>
+                <input type="text" id="vcardFirstName" placeholder="John">
+            </div>
+            <div class="form-group">
+                <label for="vcardLastName">Last Name:</label>
+                <input type="text" id="vcardLastName" placeholder="Doe">
+            </div>
+            <div class="form-group">
+                <label for="vcardPhone">Phone Number:</label>
+                <input type="tel" id="vcardPhone" placeholder="+1234567890">
+            </div>
+            <div class="form-group">
+                <label for="vcardEmail">Email:</label>
+                <input type="email" id="vcardEmail" placeholder="john.doe@example.com">
+            </div>
+            <div class="form-group">
+                <label for="vcardOrg">Organization:</label>
+                <input type="text" id="vcardOrg" placeholder="Acme Corp">
+            </div>
+            <div class="form-group">
+                <label for="vcardTitle">Title:</label>
+                <input type="text" id="vcardTitle" placeholder="Software Engineer">
+            </div>
+            <div class="form-group">
+                <label for="vcardAddress">Address:</label>
+                <input type="text" id="vcardAddress" placeholder="123 Main St, City, State, Zip, Country">
+            </div>
+            <div class="form-group">
+                <label for="vcardURL">Website URL:</label>
+                <input type="url" id="vcardURL" placeholder="https://www.example.com">
+            </div>
+            <button id="generateVCardQrBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                Generate vCard QR Code
+            </button>
+        </div>
+
+        <div id="smsInputSection" class="input-section hidden">
+            <div class="form-group">
+                <label for="smsNumber">Phone Number*:</label>
+                <input type="tel" id="smsNumber" placeholder="+1234567890">
+            </div>
+            <div class="form-group">
+                <label for="smsMessage">Message:</label>
+                <textarea id="smsMessage" rows="3" placeholder="Type your SMS message here..."></textarea>
+            </div>
+            <button id="generateSmsQrBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                Generate SMS QR Code
+            </button>
+        </div>
+
+        <div id="wifiInputSection" class="input-section hidden">
+            <div class="form-group">
+                <label for="wifiSsid">Network SSID*:</label>
+                <input type="text" id="wifiSsid" placeholder="MyHomeNetwork">
+            </div>
+            <div class="form-group">
+                <label for="wifiPassword">Password:</label>
+                <input type="password" id="wifiPassword" placeholder="password123">
+            </div>
+            <div class="form-group">
+                <label for="wifiEncryption">Encryption Type:</label>
+                <select id="wifiEncryption" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="WPA">WPA/WPA2</option>
+                    <option value="WEP">WEP</option>
+                    <option value="nopass">No Encryption</option>
+                </select>
+            </div>
+            <button id="generateWifiQrBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                Generate Wi-Fi QR Code
+            </button>
+        </div>
+
+        <!-- QR Customization Options -->
+        <div class="input-section mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">QR Code Customization:</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label for="qrSizeInput">QR Code Size (px):</label>
+                    <input type="number" id="qrSizeInput" value="300" min="50" max="1000" class="w-full">
+                </div>
+                <div class="form-group">
+                    <label for="qrErrorCorrection">Error Correction:</label>
+                    <select id="qrErrorCorrection" class="w-full p-2 border border-gray-300 rounded-md">
+                        <option value="L">Low (L)</option>
+                        <option value="M">Medium (M)</option>
+                        <option value="Q">Quartile (Q)</option>
+                        <option value="H" selected>High (H)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="qrForegroundColor">Foreground Color:</label>
+                    <div class="color-input-group">
+                        <input type="color" id="qrForegroundColor" value="#000000">
+                        <input type="text" id="qrForegroundColorText" value="#000000" class="flex-grow">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="qrBackgroundColor">Background Color:</label>
+                    <div class="color-input-group">
+                        <input type="color" id="qrBackgroundColor" value="#ffffff">
+                        <input type="text" id="qrBackgroundColorText" value="#ffffff" class="flex-grow">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group mt-4">
+                <label for="logoUpload" class="custom-file-upload !py-3 !mb-0">
+                    <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span class="text-base font-medium text-gray-600">Upload Logo (Optional)</span>
+                    <span class="text-xs text-gray-500 mt-1">PNG, JPG, max 1MB - will be centered</span>
+                </label>
+                <input type="file" id="logoUpload" accept="image/png, image/jpeg, image/jpg">
+                <img id="logoPreview" src="#" alt="Logo Preview" class="logo-preview hidden mx-auto">
+            </div>
+            <button id="applyCustomizationBtn" class="mt-4 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition duration-300 ease-in-out">
+                Apply Customization
+            </button>
+        </div>
+
+        <!-- QR Code Section (common for all types) -->
+        <div id="qrCodeSection" class="qr-code-section">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Generated QR Code:</h2>
+            <div id="qrCodeDisplayContainer" class="w-48 h-48 mx-auto"></div>
+            <p class="text-sm text-gray-500 mt-2">Click the QR code or the button below to view/open the content.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mt-6">
+                <button id="openContentBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                    Open Content in New Tab
+                </button>
+                <button id="downloadQrCodeBtn" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out">
+                    Download QR Code
+                </button>
+                <button id="shareQrCodeBtn" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition duration-300 ease-in-out">
+                    Share QR Code
+                </button>
+            </div>
+
+            <!-- New Download Options -->
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 text-left">
+                <h3 class="text-md font-semibold text-gray-700 mb-2">Download Options:</h3>
+                <div class="flex items-center gap-4 mb-2">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="downloadFormat" value="png" checked class="form-radio text-blue-600">
+                        <span class="ml-2 text-gray-700">PNG</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="downloadFormat" value="jpeg" class="form-radio text-blue-600">
+                        <span class="ml-2 text-gray-700">JPEG</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="downloadFormat" value="pdf" class="form-radio text-blue-600">
+                        <span class="ml-2 text-gray-700">PDF</span>
+                    </label>
+                </div>
+                <div class="form-group mb-0">
+                    <label for="downloadResolutionInput" class="block text-gray-700 text-sm font-bold mb-2">
+                        Download Resolution (px) / PDF Width (mm):
+                    </label>
+                    <input type="number" id="downloadResolutionInput" value="1000" min="100" max="4000" step="100"
+                           class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Box for errors/info -->
+        <div id="messageBox" class="hidden mt-4 p-3 rounded-lg text-sm" role="alert"></div>
+    </div>
+
+    <!-- qrious library for QR code generation -->
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <!-- jsPDF library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const contentTypeSelect = document.getElementById('contentType');
+            const sections = {
+                text: document.getElementById('textInputSection'),
+                url: document.getElementById('urlInputSection'),
+                image: document.getElementById('imageInputSection'),
+                email: document.getElementById('emailInputSection'),
+                event: document.getElementById('eventInputSection'),
+                vcard: document.getElementById('vcardInputSection'),
+                sms: document.getElementById('smsInputSection'),
+                wifi: document.getElementById('wifiInputSection')
+            };
+
+            const imageUpload = document.getElementById('imageUpload');
+            const imagePreview = document.getElementById('imagePreview');
+            const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+
+            const urlInput = document.getElementById('urlInput');
+            const generateUrlQrBtn = document.getElementById('generateUrlQrBtn');
+
+            const emailInput = document.getElementById('emailInput');
+            const generateEmailQrBtn = document.getElementById('generateEmailQrBtn');
+
+            const textInput = document.getElementById('textInput');
+            const generateTextQrBtn = document.getElementById('generateTextQrBtn');
+
+            const eventTitleInput = document.getElementById('eventTitleInput');
+            const eventLocationInput = document.getElementById('eventLocationInput');
+            const eventStartTimeInput = document.getElementById('eventStartTimeInput');
+            const eventEndTimeInput = document.getElementById('eventEndTimeInput');
+            const eventDescriptionInput = document.getElementById('eventDescriptionInput');
+            const generateEventQrBtn = document.getElementById('generateEventQrBtn');
+
+            const vcardFirstName = document.getElementById('vcardFirstName');
+            const vcardLastName = document.getElementById('vcardLastName');
+            const vcardPhone = document.getElementById('vcardPhone');
+            const vcardEmail = document.getElementById('vcardEmail');
+            const vcardOrg = document.getElementById('vcardOrg');
+            const vcardTitle = document.getElementById('vcardTitle');
+            const vcardAddress = document.getElementById('vcardAddress');
+            const vcardURL = document.getElementById('vcardURL');
+            const generateVCardQrBtn = document.getElementById('generateVCardQrBtn');
+
+            const smsNumber = document.getElementById('smsNumber');
+            const smsMessage = document.getElementById('smsMessage');
+            const generateSmsQrBtn = document.getElementById('generateSmsQrBtn');
+
+            const wifiSsid = document.getElementById('wifiSsid');
+            const wifiPassword = document.getElementById('wifiPassword');
+            const wifiEncryption = document.getElementById('wifiEncryption');
+            const generateWifiQrBtn = document.getElementById('generateWifiQrBtn');
+
+            const qrSizeInput = document.getElementById('qrSizeInput');
+            const qrErrorCorrection = document.getElementById('qrErrorCorrection');
+            const qrForegroundColor = document.getElementById('qrForegroundColor');
+            const qrForegroundColorText = document.getElementById('qrForegroundColorText');
+            const qrBackgroundColor = document.getElementById('qrBackgroundColor');
+            const qrBackgroundColorText = document.getElementById('qrBackgroundColorText');
+            const logoUpload = document.getElementById('logoUpload');
+            const logoPreview = document.getElementById('logoPreview');
+            const applyCustomizationBtn = document.getElementById('applyCustomizationBtn');
+
+            const qrCodeDisplayContainer = document.getElementById('qrCodeDisplayContainer'); // New container
+            let qrCodeCanvas = null; // Will hold the actual canvas generated by qrious
+
+            const openContentBtn = document.getElementById('openContentBtn');
+            const downloadQrCodeBtn = document.getElementById('downloadQrCodeBtn');
+            const shareQrCodeBtn = document.getElementById('shareQrCodeBtn'); // Get the new share button
+            const messageBox = document.getElementById('messageBox');
+
+            let currentQrData = '';
+            let currentContentType = contentTypeSelect.value;
+            let logoDataUrl = null;
+
+            // Function to display messages
+            function showMessage(message, type = 'info') {
+                messageBox.textContent = message;
+                messageBox.className = 'mt-4 p-3 rounded-lg text-sm';
+                if (type === 'error') {
+                    messageBox.classList.add('bg-red-100', 'text-red-700');
+                } else if (type === 'success') {
+                    messageBox.classList.add('bg-green-100', 'text-green-700');
+                } else if (type === 'warning') {
+                    messageBox.classList.add('bg-yellow-100', 'text-yellow-700');
+                } else {
+                    messageBox.classList.add('bg-blue-100', 'text-blue-700');
+                }
+                messageBox.classList.remove('hidden');
+            }
+
+            // Function to reset QR code display and buttons
+            function resetQrDisplay() {
+                // Clear the container, which removes the old QR code canvas
+                qrCodeDisplayContainer.innerHTML = '';
+                qrCodeCanvas = null; // Reset the reference
+                qrCodeSection.style.display = 'none';
+                openContentBtn.disabled = true;
+                downloadQrCodeBtn.disabled = true;
+                shareQrCodeBtn.disabled = true; // Disable share button on reset
+                messageBox.classList.add('hidden');
+                imagePreviewContainer.classList.add('hidden');
+                imagePreview.src = '#';
+                currentQrData = '';
+            }
+
+            // Helper to format date-time for Google Calendar URL (YYYYMMDDTHHMMSSZ)
+            function formatDateTimeForGoogleCalendar(dateTimeLocalString) {
+                if (!dateTimeLocalString) return '';
+                const date = new Date(dateTimeLocalString);
+                // Get UTC components
+                const year = date.getUTCFullYear();
+                const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+                const day = date.getUTCDate().toString().padStart(2, '0');
+                const hours = date.getUTCHours().toString().padStart(2, '0');
+                const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+                return `${year}${month}${day}T${hours}${minutes}${seconds}Z`; // Z indicates UTC
+            }
+
+            // Function to render QR code onto a given canvas element using QRious
+            async function renderQrCodeToCanvas(targetCanvas, qrData, logoUrl, size, fgColor, bgColor, errorCorrectionLevel) {
+                const ctx = targetCanvas.getContext('2d');
+                ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+                targetCanvas.width = size;
+                targetCanvas.height = size;
+
+                try {
+                    // Create a new QRious instance, directly targeting the provided canvas
+                    new QRious({
+                        element: targetCanvas,
+                        value: qrData,
+                        size: size,
+                        foreground: fgColor,
+                        background: bgColor,
+                        level: errorCorrectionLevel // QRious accepts 'L', 'M', 'Q', 'H' directly
+                    });
+
+                    // Draw logo if provided
+                    const hasLogo = !!logoUrl;
+                    if (hasLogo) {
+                        const logoSpaceRatio = 0.25;
+                        const logoSpaceSize = size * logoSpaceRatio;
+                        const logoSpaceX = (size - logoSpaceSize) / 2;
+                        const logoSpaceY = (size - logoSpaceSize) / 2;
+
+                        ctx.fillStyle = bgColor; // Use background color to clear logo area
+                        ctx.fillRect(logoSpaceX, logoSpaceY, logoSpaceSize, logoSpaceSize);
+
+                        const logoImg = new Image();
+                        await new Promise((resolve, reject) => {
+                            logoImg.onload = () => {
+                                const logoMaxDim = size * (logoSpaceRatio - 0.02);
+                                let logoWidth = logoImg.width;
+                                let logoHeight = logoImg.height;
+
+                                // Scale logo to fit while maintaining aspect ratio
+                                if (logoWidth > logoMaxDim || logoHeight > logoMaxDim) {
+                                    if (logoWidth > logoHeight) {
+                                        logoHeight = (logoHeight / logoWidth) * logoMaxDim;
+                                        logoWidth = logoMaxDim;
+                                    } else {
+                                        logoWidth = (logoWidth / logoHeight) * logoMaxDim;
+                                        logoHeight = logoMaxDim;
+                                    }
+                                }
+
+                                const logoX = (size - logoWidth) / 2;
+                                const logoY = (size - logoHeight) / 2;
+
+                                ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+                                resolve();
+                            };
+                            logoImg.onerror = (e) => {
+                                console.error('Failed to load logo image for rendering:', e);
+                                // Resolve even on error to allow the main flow to continue without logo
+                                resolve();
+                            };
+                            logoImg.src = logoUrl;
+                        });
+                    }
+                } catch (e) {
+                    console.error("Error during QR Code rendering process:", e);
+                    throw new Error("Failed to generate QR code. " + e.message);
+                }
+            }
+
+            // Main function to draw QR code for display
+            async function drawQrCodeForDisplay(qrData, logoUrl = null) {
+                if (!qrData) {
+                    resetQrDisplay();
+                    return;
+                }
+
+                const qrSize = parseInt(qrSizeInput.value);
+                const fgColor = qrForegroundColor.value;
+                const bgColor = qrBackgroundColor.value;
+                const errorCorrectionLevel = qrErrorCorrection.value;
+
+                // Clear previous QR code
+                qrCodeDisplayContainer.innerHTML = '';
+                qrCodeCanvas = document.createElement('canvas'); // Create a new canvas for display
+                qrCodeDisplayContainer.appendChild(qrCodeCanvas); // Append it to the display container
+
+                try {
+                    // Render the QR code to the display canvas
+                    await renderQrCodeToCanvas(qrCodeCanvas, qrData, logoUrl, qrSize, fgColor, bgColor, errorCorrectionLevel);
+
+                    qrCodeSection.style.display = 'block';
+                    openContentBtn.disabled = false;
+                    downloadQrCodeBtn.disabled = false;
+                    shareQrCodeBtn.disabled = false; // Enable share button
+                    showMessage('QR code generated successfully!', 'success');
+                } catch (e) {
+                    console.error("Error drawing QR Code for display:", e);
+                    showMessage('Failed to generate QR code. ' + e.message, 'error');
+                    resetQrDisplay(); // Reset on failure
+                }
+            }
+
+
+            // Function to handle opening content in a new tab based on type
+            function openContentInNewTab() {
+                if (!currentQrData) {
+                    showMessage('No content available to open.', 'error');
+                    return;
+                }
+                if (!qrCodeCanvas) {
+                    showMessage('QR code canvas not found.', 'error');
+                    return;
+                }
+
+                let newTab;
+                try {
+                    switch (currentContentType) {
+                        case 'image':
+                            newTab = window.open();
+                            if (newTab) {
+                                newTab.document.write(`<img src="${currentQrData}" style="max-width: 100%; height: auto; display: block; margin: auto;">`);
+                                newTab.document.title = "Uploaded Image";
+                            }
+                            break;
+                        case 'url':
+                        case 'event':
+                        case 'sms':
+                        case 'wifi':
+                            newTab = window.open(currentQrData, '_blank');
+                            break;
+                        case 'email':
+                            window.location.href = `mailto:${currentQrData}`;
+                            showMessage('Your email client should open to compose an email.', 'info');
+                            return;
+                        case 'text':
+                            newTab = window.open();
+                            if (newTab) {
+                                newTab.document.write(`<pre style="white-space: pre-wrap; word-wrap: break-word;">${currentQrData}</pre>`);
+                                newTab.document.title = "QR Code Text Content";
+                            }
+                            break;
+                        case 'vcard':
+                            newTab = window.open();
+                            if (newTab) {
+                                newTab.document.write(`<pre style="white-space: pre-wrap; word-wrap: break-word;">${currentQrData}</pre>`);
+                                newTab.document.title = "vCard Content";
+                                showMessage('For vCard, scanning with a phone QR app is recommended to add contact directly. Clicking here shows raw vCard data.', 'info');
+                            }
+                            break;
+                        default:
+                            showMessage('Unsupported content type for opening.', 'error');
+                            return;
+                    }
+
+                    if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
+                        showMessage('Pop-up blocked! Please allow pop-ups for this site.', 'error');
+                    }
+                } catch (e) {
+                    console.error("Error opening content:", e);
+                    showMessage('An error occurred while trying to open the content.', 'error');
+                }
+            }
+
+            // --- Event Listeners for Content Type Selection ---
+            contentTypeSelect.addEventListener('change', () => {
+                currentContentType = contentTypeSelect.value;
+                resetQrDisplay();
+
+                Object.values(sections).forEach(section => section.classList.add('hidden'));
+                sections[currentContentType].classList.remove('hidden');
+            });
+
+            // --- Event Listeners for QR Code Generation ---
+
+            // Text Input
+            generateTextQrBtn.addEventListener('click', () => {
+                const text = textInput.value.trim();
+                if (!text) {
+                    showMessage('Please enter some text.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+                currentQrData = text;
+                drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                if (currentQrData.length > 500) {
+                    showMessage('Text QR code generated. Warning: This text is long, and the QR code might be difficult for some scanners to read.', 'warning');
+                } else {
+                    showMessage('Text QR code generated successfully!', 'success');
+                }
+            });
+
+            // URL Input
+            generateUrlQrBtn.addEventListener('click', () => {
+                const url = urlInput.value.trim();
+                if (!url) {
+                    showMessage('Please enter a URL.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+                try {
+                    new URL(url);
+                }
+                catch (_) {
+                    showMessage('Please enter a valid URL (e.g., https://www.example.com).', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+                currentQrData = url;
+                drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                showMessage('URL QR code generated successfully!', 'success');
+            });
+
+            // Image Upload
+            imageUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    resetQrDisplay();
+                    return;
+                }
+                if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+                    showMessage('Please upload a PNG, JPG, or JPEG image.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+                const maxSize = 5 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    showMessage('Image size exceeds 5MB limit. Please upload a smaller image.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+                showMessage('Reading image data...', 'info');
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentQrData = e.target.result;
+                    imagePreview.src = currentQrData;
+                    imagePreviewContainer.classList.remove('hidden');
+                    drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                    if (currentQrData.length > 2000) {
+                        showMessage('QR code generated. Warning: This image is large, and the QR code might be difficult for some scanners to read. Consider downloading the QR code and trying different scanners.', 'warning');
+                    } else {
+                        showMessage('Image QR code generated successfully!', 'success');
+                    }
+                };
+                reader.onerror = function() {
+                    showMessage('Error reading image file.', 'error');
+                    resetQrDisplay();
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Email Input
+            generateEmailQrBtn.addEventListener('click', () => {
+                const email = emailInput.value.trim();
+                if (!email) {
+                    showMessage('Please enter an email address.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    showMessage('Please enter a valid email address.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+                currentQrData = `mailto:${email}`;
+                drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                showMessage('Email QR code generated successfully!', 'success');
+            });
+
+            // Event Input
+            generateEventQrBtn.addEventListener('click', () => {
+                const title = encodeURIComponent(eventTitleInput.value.trim());
+                const location = encodeURIComponent(eventLocationInput.value.trim());
+                const startTime = eventStartTimeInput.value;
+                const endTime = eventEndTimeInput.value;
+                const description = encodeURIComponent(eventDescriptionInput.value.trim());
+
+                if (!title || !startTime) {
+                    showMessage('Event Title and Start Date & Time are required.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+
+                const formattedStartTime = formatDateTimeForGoogleCalendar(startTime);
+                let formattedEndTime = formattedStartTime;
+                if (endTime) {
+                    formattedEndTime = formatDateTimeForGoogleCalendar(endTime);
+                }
+
+                let googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${formattedStartTime}/${formattedEndTime}`;
+                if (location) {
+                    googleCalendarUrl += `&location=${location}`;
+                }
+                if (description) {
+                    googleCalendarUrl += `&details=${description}`;
+                }
+
+                currentQrData = googleCalendarUrl;
+                drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                if (currentQrData.length > 500) {
+                    showMessage('QR code generated. Warning: Event details are extensive, and the QR code might be difficult for some scanners to read.', 'warning');
+                } else {
+                    showMessage('Event QR code generated successfully!', 'success');
+                }
+            });
+
+            // vCard Input
+            generateVCardQrBtn.addEventListener('click', () => {
+                const firstName = vcardFirstName.value.trim();
+                const lastName = vcardLastName.value.trim();
+                const phone = vcardPhone.value.trim();
+                const email = vcardEmail.value.trim();
+                const org = vcardOrg.value.trim();
+                const title = vcardTitle.value.trim();
+                const address = vcardAddress.value.trim();
+                const url = vcardURL.value.trim();
+
+                if (!firstName && !lastName && !phone && !email && !org && !title && !address && !url) {
+                    showMessage('Please fill at least one field for the vCard.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+
+                let vcardString = `BEGIN:VCARD\nVERSION:3.0\n`;
+                if (firstName || lastName) {
+                    vcardString += `N:${lastName};${firstName};;;\n`;
+                    vcardString += `FN:${firstName} ${lastName}\n`;
+                }
+                if (phone) vcardString += `TEL:${phone}\n`;
+                if (email) vcardString += `EMAIL:${email}\n`;
+                if (org) vcardString += `ORG:${org}\n`;
+                if (title) vcardString += `TITLE:${title}\n`;
+                if (address) vcardString += `ADR:;;${address};;;;\n`;
+                if (url) vcardString += `URL:${url}\n`;
+                vcardString += `END:VCARD`;
+
+                currentQrData = vcardString;
+                drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                if (currentQrData.length > 1000) {
+                    showMessage('QR code generated. Warning: vCard data is extensive, and the QR code might be difficult for some scanners to read.', 'warning');
+                } else {
+                    showMessage('vCard QR code generated successfully!', 'success');
+                }
+            });
+
+            // SMS Input
+            generateSmsQrBtn.addEventListener('click', () => {
+                const number = smsNumber.value.trim();
+                const message = smsMessage.value.trim();
+
+                if (!number) {
+                    showMessage('Please enter a phone number for SMS.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+                if (!/^\+?[0-9\s-()]{7,20}$/.test(number)) {
+                    showMessage('Please enter a valid phone number.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+
+                currentQrData = `smsto:${number}:${encodeURIComponent(message)}`;
+                drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                showMessage('SMS QR code generated successfully!', 'success');
+            });
+
+            // Wi-Fi Input
+            generateWifiQrBtn.addEventListener('click', () => {
+                const ssid = wifiSsid.value.trim();
+                const password = wifiPassword.value.trim();
+                const encryption = wifiEncryption.value;
+
+                if (!ssid) {
+                    showMessage('Please enter the Wi-Fi Network SSID.', 'error');
+                    resetQrDisplay();
+                    return;
+                }
+
+                currentQrData = `WIFI:S:${ssid};T:${encryption};P:${password};;`;
+                drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                showMessage('Wi-Fi QR code generated successfully!', 'success');
+            });
+
+            // --- Customization Event Listeners ---
+            qrForegroundColor.addEventListener('input', (e) => qrForegroundColorText.value = e.target.value);
+            qrForegroundColorText.addEventListener('input', (e) => qrForegroundColor.value = e.target.value);
+            qrBackgroundColor.addEventListener('input', (e) => qrBackgroundColorText.value = e.target.value);
+            qrBackgroundColorText.addEventListener('input', (e) => qrBackgroundColor.value = e.target.value);
+
+            logoUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    if (!file.type.startsWith('image/')) {
+                        showMessage('Please upload an image file for the logo.', 'error');
+                        logoPreview.classList.add('hidden');
+                        logoDataUrl = null;
+                        return;
+                    }
+                    if (file.size > 1 * 1024 * 1024) { // 1MB limit for logo
+                        showMessage('Logo image size exceeds 1MB limit. Please upload a smaller image.', 'error');
+                        logoPreview.classList.add('hidden');
+                        logoDataUrl = null;
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        logoDataUrl = e.target.result;
+                        logoPreview.src = logoDataUrl;
+                        logoPreview.classList.remove('hidden');
+                        showMessage('Logo uploaded. Click "Apply Customization" to update QR code.', 'info');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    logoDataUrl = null;
+                    logoPreview.classList.add('hidden');
+                    showMessage('Logo removed. Click "Apply Customization" to update QR code.', 'info');
+                }
+            });
+
+            applyCustomizationBtn.addEventListener('click', () => {
+                if (currentQrData) {
+                    drawQrCodeForDisplay(currentQrData, logoDataUrl);
+                    showMessage('Customization applied!', 'success');
+                } else {
+                    showMessage('Please generate a QR code first before applying customizations.', 'warning');
+                }
+            });
+
+            // --- Common Action Buttons ---
+            openContentBtn.addEventListener('click', openContentInNewTab);
+            // Attach click listener to the container, as the canvas itself is dynamic
+            qrCodeDisplayContainer.addEventListener('click', openContentInNewTab);
+
+            downloadQrCodeBtn.addEventListener('click', async () => {
+                if (!currentQrData) {
+                    showMessage('No QR code data to download.', 'error');
+                    return;
+                }
+
+                const downloadFormat = document.querySelector('input[name="downloadFormat"]:checked').value;
+                const downloadResolution = parseInt(document.getElementById('downloadResolutionInput').value);
+
+                if (downloadFormat === 'pdf') {
+                    // PDF generation
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF(); // Default A4, portrait, mm units
+
+                    // Create an off-screen canvas for high-resolution rendering for PDF
+                    const offscreenCanvas = document.createElement('canvas');
+                    try {
+                        await renderQrCodeToCanvas(offscreenCanvas, currentQrData, logoDataUrl, downloadResolution, qrForegroundColor.value, qrBackgroundColor.value, qrErrorCorrection.value);
+                    } catch (e) {
+                        showMessage('Failed to generate QR code for PDF. ' + e.message, 'error');
+                        console.error('PDF generation error:', e);
+                        return;
+                    }
+
+                    const imgData = offscreenCanvas.toDataURL('image/png'); // Always use PNG for PDF embedding for quality
+
+                    // Calculate image dimensions for PDF (maintain aspect ratio)
+                    const imgWidth = doc.internal.pageSize.getWidth();
+                    const imgHeight = (offscreenCanvas.height * imgWidth) / offscreenCanvas.width;
+
+                    doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                    doc.save(`${currentContentType}_qrcode.pdf`);
+                    showMessage('QR Code downloaded successfully as PDF!', 'success');
+
+                } else {
+                    // PNG/JPEG generation
+                    const offscreenCanvas = document.createElement('canvas');
+
+                    // Use a Promise to ensure the QR code and logo are fully rendered on the offscreen canvas
+                    try {
+                        await renderQrCodeToCanvas(offscreenCanvas, currentQrData, logoDataUrl, downloadResolution, qrForegroundColor.value, qrBackgroundColor.value, qrErrorCorrection.value);
+                    } catch (e) {
+                        showMessage('Failed to generate QR code for download. ' + e.message, 'error');
+                        console.error('Image download error:', e);
+                        return;
+                    }
+
+                    try {
+                        const mimeType = downloadFormat === 'png' ? 'image/png' : 'image/jpeg';
+                        const quality = downloadFormat === 'jpeg' ? 0.9 : 1.0; // JPEG quality (0.0 to 1.0)
+
+                        const dataUrl = offscreenCanvas.toDataURL(mimeType, quality);
+                        const link = document.createElement('a');
+                        link.download = `${currentContentType}_qrcode.${downloadFormat}`;
+                        link.href = dataUrl;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        showMessage(`QR Code downloaded successfully as ${downloadFormat.toUpperCase()}!`, 'success');
+                    } catch (e) {
+                        console.error('Error downloading QR code:', e);
+                        showMessage('Failed to download QR code. Please try again.', 'error');
+                    }
+                }
+            });
+
+            shareQrCodeBtn.addEventListener('click', async () => {
+                if (!currentQrData) {
+                    showMessage('No QR code data to share.', 'error');
+                    return;
+                }
+
+                // Create an off-screen canvas for sharing (using current display resolution for simplicity)
+                const shareCanvas = document.createElement('canvas');
+                const shareSize = parseInt(qrSizeInput.value); // Use current display size for sharing
+
+                try {
+                    await renderQrCodeToCanvas(shareCanvas, currentQrData, logoDataUrl, shareSize, qrForegroundColor.value, qrBackgroundColor.value, qrErrorCorrection.value);
+                } catch (e) {
+                    showMessage('Failed to generate QR code for sharing. ' + e.message, 'error');
+                    console.error('Share generation error:', e);
+                    return;
+                }
+
+                try {
+                    const blob = await new Promise(resolve => shareCanvas.toBlob(resolve, 'image/png'));
+
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], 'qrcode.png', { type: 'image/png' })] })) {
+                        await navigator.share({
+                            files: [new File([blob], 'qrcode.png', { type: 'image/png' })],
+                            title: 'My QR Code',
+                            text: 'Check out this QR code generated with the Advanced QR Code Generator!'
+                        });
+                        showMessage('QR Code shared successfully!', 'success');
+                    } else {
+                        showMessage('Web Share API not supported or cannot share images in this browser. Please right-click and save the QR code, then share manually.', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error sharing QR code:', error);
+                    showMessage('Failed to share QR code. ' + error.message, 'error');
+                }
+            });
+
+            // Initial state setup
+            contentTypeSelect.dispatchEvent(new Event('change'));
+            console.log("QR Code Generator script loaded and DOMContentLoaded handler finished.");
+        });
+        // End of JavaScript for QR Code Generator
+    </script>
+</body>
+</html>
